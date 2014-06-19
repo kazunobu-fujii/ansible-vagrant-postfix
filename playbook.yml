@@ -1,0 +1,43 @@
+---
+- hosts: all
+  sudo: yes
+  tasks:
+    - name: update apt cache
+      apt: >
+        update_cache=yes 
+
+    - name: be sure postfix is installed
+      apt: pkg=postfix state=installed
+
+    - name: create postfix configuration
+      template: src=main.cf dest=/etc/postfix/main.cf mode=0644 owner=root group=root
+      notify:
+      - restart postfix
+
+    - name: be sure pop3/imap is installed
+      apt: pkg=dovecot-common,dovecot-pop3d,dovecot-imapd state=installed
+
+    - name: create dovecot configuration
+      template: src=10-mail.conf dest=/etc/dovecot/conf.d/10-mail.conf mode=0644 owner=root group=root
+      notify:
+      - restart dovecot
+
+    - name: prepare skel for MailDir
+      file: dest=/etc/skel/Maildir/new state=directory mode=0700 owner=root group=root
+      file: dest=/etc/skel/Maildir/cur state=directory mode=0700 owner=root group=root
+      file: dest=/etc/skel/Maildir/tmp state=directory mode=0700 owner=root group=root
+
+    - name: create user1 with password '1234abcd'
+      user: name=user1 password=$1$SomeSalt$7Hms1g9oRQKf4eJlmWcPq1 shell=/bin/bash home=/home/user1
+    - name: create user2 with password '1234abcd'
+      user: name=user2 password=$1$SomeSalt$7Hms1g9oRQKf4eJlmWcPq1 shell=/bin/bash home=/home/user2
+    - name: create user3 with password '1234abcd'
+      user: name=user3 password=$1$SomeSalt$7Hms1g9oRQKf4eJlmWcPq1 shell=/bin/bash home=/home/user3
+
+  handlers:
+    - name: restart postfix
+      service: name=postfix state=restarted
+
+    - name: restart dovecot
+      service: name=dovecot state=restarted
+
